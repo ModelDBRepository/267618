@@ -1,0 +1,43 @@
+/*--------------------------------------------------------------------
+
+A simple fascicle containing five A fibres and five C fibres.
+
+----------------------------------------------------------------------*/
+
+load_file("simpleFibre.hoc") 
+
+// global settings
+fascD = 400
+nfibre = 0                
+totfibres = 10
+
+objref fibre[totfibres], fasRand
+fasRand = new Random()
+
+proc placeFibre() { local isafibre, loc, std
+    yjit = $1
+    zjit = $2
+    fibre[nfibre] = new simpleFibreBuilder(0,yjit,zjit)
+    nfibre += 1
+}
+
+proc createFascicle() { local i, fasCenter, fasSize, numPopulation
+    // normal distribution jitter for population location
+    fasCenterX = $1
+    fasCenterY = $2
+    fasR = $3 / 2
+    fasRand.uniform(0, 1)
+
+    printf("INFO: creating fascicles...\n")
+
+    // create fibres within the fascicle
+	for i = 0, totfibres-1 {
+        // place A type fibres
+        r = (fasR-10) * sqrt(fasRand.repick())
+        theta = fasRand.repick() * 2 * PI 
+        placeFibre(fasCenterX+r*cos(theta), fasCenterY+r*sin(theta))
+    }
+    printf("INFO:     fibres = %d\n", nfibre)
+}
+
+createFascicle(0,0,fascD)

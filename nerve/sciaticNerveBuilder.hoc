@@ -1,0 +1,52 @@
+/*--------------------------------------------------------------------
+
+The cross section of sciatic nerve is adapted from figure 2, panel B, left image of Burks, Levi, Hayes, & Levi, 2014.
+
+Publication DOI: 10.3171/2014.2.JNS131667.
+
+Fibre coordinates in the nerve are generated from the MATLAB script "fibreCoordsGen.m".
+
+----------------------------------------------------------------------*/
+
+load_file("AFibreBuilder.hoc") 
+load_file("CFibreBuilder.hoc")
+
+// global settings
+nLargeFasc = 3          // number of large fascicles in sciatic nerve
+nFibreLarge = 150       // number of fibres within a large fascicle
+nMediumFasc = 5         // number of medium fascicles in sciatic nerve
+nFibreMedium = 90       // number of fibres within a medium fascicle
+nSmallFasc = 6          // number of small fascicles in sciatic nerve 
+nFibreSmall = 45        // number of fibres within a small fascicle
+totFibres = nLargeFasc*nFibreLarge + \
+            nMediumFasc*nFibreMedium + \
+            nSmallFasc*nFibreSmall
+fibreCounter = 0
+
+objref fibre[totFibres], rand
+objref gFobj
+strdef fName
+sprint(fName, "sciaticNerveCoords.txt")
+gFobj = new File()
+gFobj.ropen(fName)
+
+// randomise placement of fibres
+rand = new Random()
+rand.uniform(0,1) 
+
+// construct sciatic nerve
+printf("Info: will create %d fibres\n", totFibres)
+for i = 0, totFibres-1 {
+      // read from coordinates
+      y = gFobj.scanvar()
+      z = gFobj.scanvar()
+      // place: 30% A fibre, 70% C fibre
+      if (rand.repick() < 0.3) {
+            fibre[fibreCounter] = new AFibreBuilder(0,y,z)
+      } else {
+            fibre[fibreCounter] = new CFibreBuilder(0,y,z)
+      }
+      fibreCounter += 1
+}
+
+gFobj.close()

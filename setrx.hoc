@@ -1,0 +1,42 @@
+/*--------------------------------------------------------------------
+
+Calculates the transfer resistances between extracellular electrode(s) and a modelled fibre section. Suppose a
+stimulus current of amplitude Is, applied to a particular configuration of extracellular electrode(s), produces a 
+potential Vext(x,y,z) at location (x,y,z). Then the transfer resistance between the electrode(s) and (x,y,z) is 
+rx(x,y,z) = Vext(x,y,z) / Is.
+
+----------------------------------------------------------------------*/
+
+forall {
+    insert extracellular
+    insert xtra
+}
+
+objectvar f
+f = new File()
+f.ropen("rx_xtra_interpolated.txt")
+
+proc grindaway() {
+    forall {
+        if (ismembrane("xtra")) {
+            for (x,0) {
+                rx_xtra(x) = f.scanvar() / 1e6
+            }
+        }
+    }
+}
+
+proc setpointers() { local done
+    // determines interpolated locations of nodes
+    grindaway()
+    forall {
+        if (ismembrane("xtra")) {
+	        for (x, 0) {
+		        setpointer im_xtra(x), i_membrane(x)
+		        setpointer ex_xtra(x), e_extracellular(x)
+	        }
+        }
+    }
+}
+
+setpointers()

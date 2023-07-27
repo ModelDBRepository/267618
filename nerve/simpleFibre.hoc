@@ -1,0 +1,81 @@
+/*--------------------------------------------------------------------
+
+Adapted from Sundt et. al's model, 2015.
+
+Publication DOI: 10.1152/jn.00226.2015.
+
+ModelDB link: https://senselab.med.yale.edu/ModelDB/showmodel.cshtml?model=187473#tabs-1. 
+
+----------------------------------------------------------------------*/
+
+
+begintemplate simpleFibreBuilder
+
+    public node
+    create node[1]
+
+    proc setVariables() {
+        nSegments = 10         // the number of compartment
+        fibreL = 1000          // total length of the c fibre
+        dx = fibreL / nSegments
+        fibreD = 10           // value chosen from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3410526/ 
+        NAV = .04               // Na channel density
+        KV = .04                // K channel density
+    }
+       
+    proc build() {
+        create node[nSegments]
+        for i = 0,nSegments-1 {
+            node[i] {
+                pt3dclear()
+                nseg = 1
+                L = dx
+                diam = fibreD        
+                pt3dadd($1+i*dx, $2, $3, diam)
+                pt3dadd($1+(i+1)*dx, $2, $3, diam)  // peripherial axon
+
+                if (i==0 || i==(nSegments-1)) {
+                    insert pas
+                    g_pas = 0.0001
+                    e_pas=-60                      
+                    cm=1                  
+
+                    //no myelination
+                    insert extracellular
+                    xg = 1e10 // short circuit, no myelin
+                    xc = 0    // short circuit, no myelin
+                    Ra = 1e10 // this forces current passive membrane and not into cable
+			    } else {
+                    insert nahh
+					gnabar_nahh = NAV
+					mshift_nahh = -6		    // NaV1.7/1.8 channelshift
+					hshift_nahh = 6		        // NaV1.7/1.8 channelshift
+
+					insert borgkdr			// insert delayed rectifier K channels
+					gkdrbar_borgkdr = KV	// density of K channels
+					ek = -90	  		    // K equilibrium potential
+
+					insert pas			// insert leak channels	
+					g_pas = 1/10000		// set Rm = 10000 ohms-cm2
+					Ra = 100			// intracellular resistance
+					v=-60
+					e_pas = v + (ina + ik)/g_pas	// calculate leak equilibrium potential
+
+                    insert extracellular
+                    xg = 1e10 // short circuit
+                    xc = 0    // short circuit
+                }
+            }
+        }
+
+        for i=0, nSegments-2 {
+            connect node[i](1), node[i+1](0)    
+        } 
+    }
+
+    proc init() {
+        setVariables()
+        build($1,$2,$3)
+    }            
+
+endtemplate simpleFibreBuilder

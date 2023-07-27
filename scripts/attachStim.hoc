@@ -1,0 +1,45 @@
+// The stimulation code is based on stim.hoc. 
+//
+// Calculates the transfer resistances between extracellular stimulating|recording
+// electrode(s) and a model neuron.  Relies on the principle of reciprocity, which
+// assumes that the intervening bath and tissue can be treated as linear.  Suppose a
+// stimulus current of amplitude Is, applied to a particular configuration of
+// extracellular electrode(s), produces a potential Vext(x,y,z) at location (x,y,z).
+// Then the transfer resistance between the electrode(s) and (x,y,z) is 
+//   rx(x,y,z) = Vext(x,y,z)/Is
+//
+// Insert the extracellular and xtra mechanisms in all sections that are subject to 
+// the extracellular field. Compute the transfer resistance rx for every section that
+// contains xtra, as illustrated below. Construct a stimulus waveform template and 
+// copy it to a Vector. For each internal node along the axon, use this Vector to 
+// drive is_xtra(x). The xtra mechanism uses the rx values to convert the stimulus
+// current waveform into the proper amplitude and sign of the local extracellular 
+// field.
+// 
+// The principle of superposition may be applied to deal with an arbitrary number of
+// monopolar electrodes, or even surface electrodes with different shapes and areas,
+// which are located at arbitrary positions, and deliver arbitrary stimulus currents.
+//
+// The stimulus is constructed from a waveform template that is copied to a Vector. 
+// For each section that has the xtra mechanism, this Vector is used to drive
+// is_xtra. The transfer resistance rx_xtra takes care of the amplitude and sign of 
+// the local extracellular field. This works with fixed dt and adaptive integration.
+
+objref stim_amp, stim_time
+stim_amp = new Vector()
+stim_time = new Vector()
+
+ATTACHED__ = 0
+proc attach_stim() {
+    // since is_xtra is GLOBAL, we only need to specify Vector.play()
+    // for one instance of xtra, i.e. at just one internal node
+    // of only one section that contains xtra
+    forall {
+        if (ATTACHED__ == 0) {
+            if (ismembrane("xtra")) {
+                stim_amp.play(&is_xtra, stim_time, 1) // "interpolated" play
+                ATTACHED__ = 1
+            }
+        }
+    }
+}

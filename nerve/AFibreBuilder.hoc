@@ -1,0 +1,187 @@
+/*--------------------------------------------------------------------
+
+Adapted from the MRG axon model from McIntyre CC, Richardson AG, and Grill WM, 2002.
+
+Publication DOI: 10.1152/jn.00353.2001.
+
+ModelDB link: https://senselab.med.yale.edu/ModelDB/showmodel.cshtml?model=3810#tabs-1. 
+
+----------------------------------------------------------------------*/
+
+
+begintemplate AFibreBuilder
+
+    public node, MYSA, FLUT, STIN
+    create node[1], MYSA[1], FLUT[1], STIN[1]
+
+    proc model_globels() {            
+        celsius=37            
+        v_init=-80  // mV
+        // topological parameters
+        axonnodes=21            
+        paranodes1=40
+        paranodes2=40 
+        axoninter=120        
+        axontotal=221         
+        // morphological parameters
+        fibreD= 5.7 //choose from 5.7, 7.3, 8.7, 10.0, 11.5, 12.8, 14.0, 15.0, 16.0
+        paralength1=3  
+        nodelength=1.0
+        space_p1=0.002  
+        space_p2=0.004
+        space_i=0.004
+        // electrical parameters
+        rhoa=0.7e6   // Ohm-um
+        mycm=0.1     // uF/cm2/lamella membrane
+        mygm=0.001   // S/cm2/lamella membrane
+    }
+
+    proc dependent_var() {
+        if (fibreD==5.7) {g=0.605 axonD=3.4 nodeD=1.9 paraD1=1.9 paraD2=3.4 deltax=500 paralength2=35 nl=80}
+        if (fibreD==7.3) {g=0.630 axonD=4.6 nodeD=2.4 paraD1=2.4 paraD2=4.6 deltax=750 paralength2=38 nl=100}
+        if (fibreD==8.7) {g=0.661 axonD=5.8 nodeD=2.8 paraD1=2.8 paraD2=5.8 deltax=1000 paralength2=40 nl=110}
+        if (fibreD==10.0) {g=0.690 axonD=6.9 nodeD=3.3 paraD1=3.3 paraD2=6.9 deltax=1150 paralength2=46 nl=120}
+        if (fibreD==11.5) {g=0.700 axonD=8.1 nodeD=3.7 paraD1=3.7 paraD2=8.1 deltax=1250 paralength2=50 nl=130}
+        if (fibreD==12.8) {g=0.719 axonD=9.2 nodeD=4.2 paraD1=4.2 paraD2=9.2 deltax=1350 paralength2=54 nl=135}
+        if (fibreD==14.0) {g=0.739 axonD=10.4 nodeD=4.7 paraD1=4.7 paraD2=10.4 deltax=1400 paralength2=56 nl=140}
+        if (fibreD==15.0) {g=0.767 axonD=11.5 nodeD=5.0 paraD1=5.0 paraD2=11.5 deltax=1450 paralength2=58 nl=145}
+        if (fibreD==16.0) {g=0.791 axonD=12.7 nodeD=5.5 paraD1=5.5 paraD2=12.7 deltax=1500 paralength2=60 nl=150}
+        Rpn0=(rhoa*.01)/(PI*((((nodeD/2)+space_p1)^2)-((nodeD/2)^2)))
+        Rpn1=(rhoa*.01)/(PI*((((paraD1/2)+space_p1)^2)-((paraD1/2)^2)))
+        Rpn2=(rhoa*.01)/(PI*((((paraD2/2)+space_p2)^2)-((paraD2/2)^2)))
+        Rpx=(rhoa*.01)/(PI*((((axonD/2)+space_i)^2)-((axonD/2)^2)))
+        interlength=int((deltax-nodelength-(2*paralength1)-(2*paralength2))/6)
+    }
+
+    proc build() {
+        create node[axonnodes], MYSA[paranodes1], FLUT[paranodes2], STIN[axoninter]
+        currx = 0
+        for i=0,axonnodes-2 { 
+            node[i] {
+                diam=nodeD
+                pt3dclear()
+                pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+                pt3dadd($1+currx+nodelength, $2, $3, diam)     // add 3d end x position
+                currx = currx + nodelength
+                nseg=1
+                L=nodelength
+                Ra=rhoa/10000
+                cm=2
+                insert axnode            
+                insert extracellular xraxial=Rpn0 xg=1e10 xc=0
+            }
+            MYSA[2*i] {
+                diam= fibreD
+                pt3dclear()
+                pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+                pt3dadd($1+currx+paralength1, $2, $3, diam)     // add 3d end x position
+                currx = currx + paralength1
+                nseg=1
+                L=paralength1
+                Ra=rhoa*(1/(paraD1/fibreD)^2)/10000
+                cm=2*paraD1/fibreD
+                insert pas
+                g_pas=0.001*paraD1/fibreD        
+                e_pas=-80
+                insert extracellular xraxial=Rpn1 xg=mygm/(nl*2) xc=mycm/(nl*2)
+            }
+            FLUT[2*i] {
+                diam= fibreD
+                pt3dclear()
+                pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+                pt3dadd($1+currx+paralength2, $2, $3, diam)     // add 3d end x position
+                currx = currx + paralength2
+                nseg=1
+                L=paralength2
+                Ra=rhoa*(1/(paraD2/fibreD)^2)/10000
+                cm=2*paraD2/fibreD
+                insert pas
+                g_pas=0.0001*paraD2/fibreD        
+                e_pas=-80
+                insert extracellular xraxial=Rpn2 xg=mygm/(nl*2) xc=mycm/(nl*2)
+            }
+            for j=0,5 {
+                STIN[6*i+j] {
+                    diam= fibreD
+                    pt3dclear()
+                    pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+                    pt3dadd($1+currx+interlength, $2, $3, diam)     // add 3d end x position
+                    currx = currx + interlength
+                    nseg=1
+                    L=interlength
+                    Ra=rhoa*(1/(axonD/fibreD)^2)/10000
+                    cm=2*axonD/fibreD
+                    insert pas
+                    g_pas=0.0001*axonD/fibreD
+                    e_pas=-80
+                    insert extracellular xraxial=Rpx xg=mygm/(nl*2) xc=mycm/(nl*2)
+                }
+            }
+            FLUT[2*i+1] {
+                diam= fibreD
+                pt3dclear()
+                pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+                pt3dadd($1+currx+paralength2, $2, $3, diam)     // add 3d end x position
+                currx = currx + paralength2
+                nseg=1
+                L=paralength2
+                Ra=rhoa*(1/(paraD2/fibreD)^2)/10000
+                cm=2*paraD2/fibreD
+                insert pas
+                g_pas=0.0001*paraD2/fibreD        
+                e_pas=-80
+                insert extracellular xraxial=Rpn2 xg=mygm/(nl*2) xc=mycm/(nl*2)
+            }
+            MYSA[2*i+1] {
+                diam= fibreD
+                pt3dclear()
+                pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+                pt3dadd($1+currx+paralength1, $2, $3, diam)     // add 3d end x position
+                currx = currx + paralength1
+                nseg=1
+                L=paralength1
+                Ra=rhoa*(1/(paraD1/fibreD)^2)/10000
+                cm=2*paraD1/fibreD
+                insert pas
+                g_pas=0.001*paraD1/fibreD        
+                e_pas=-80
+                insert extracellular xraxial=Rpn1 xg=mygm/(nl*2) xc=mycm/(nl*2)
+            }
+        }
+        node[axonnodes-1] {
+            diam=nodeD
+            pt3dclear()
+            pt3dadd($1+currx, $2, $3, diam)                // add 3d start x position
+            pt3dadd($1+currx+nodelength, $2, $3, diam)     // add 3d end x position
+            currx = currx + nodelength
+            nseg=1
+            L=nodelength
+            Ra=rhoa/10000
+            cm=2
+            insert axnode            
+            insert extracellular xraxial=Rpn0 xg=1e10 xc=0
+        }
+        
+        for i=0, axonnodes-2 {
+            connect MYSA[2*i](0), node[i](1)
+            connect FLUT[2*i](0), MYSA[2*i](1)
+            connect STIN[6*i](0), FLUT[2*i](1)
+            connect STIN[6*i+1](0), STIN[6*i](1)
+            connect STIN[6*i+2](0), STIN[6*i+1](1)
+            connect STIN[6*i+3](0), STIN[6*i+2](1)
+            connect STIN[6*i+4](0), STIN[6*i+3](1)    
+            connect STIN[6*i+5](0), STIN[6*i+4](1)    
+            connect FLUT[2*i+1](0), STIN[6*i+5](1)
+            connect MYSA[2*i+1](0), FLUT[2*i+1](1)
+            connect node[i+1](0), MYSA[2*i+1](1)    
+        }
+    
+    }
+
+    proc init() {
+        model_globels()
+        dependent_var()
+        build($1, $2, $3)
+    }
+
+endtemplate AFibreBuilder

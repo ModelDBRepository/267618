@@ -1,0 +1,50 @@
+// create A fibre
+load_file("nerve/AFibreBuilder.hoc") 
+
+objref Afibre
+Afibre = new AFibreBuilder(0,0,0)
+
+// apply intracellular stim at proximal end
+access Afibre.node[0]
+objref stim
+stim = new IClamp(.5)
+stim.del = 20
+stim.dur = 0.1
+stim.amp = 1
+
+tstop= 160      // simulation time
+v_init = -80    // resting potential for A fibre
+
+// record responses at proximal, medial, and distal end
+{load_file("stdgui.hoc")}
+objref guiGraph
+objref attDv1, attDv2, attDv3
+objref gFobj
+strdef fName
+attDv1 = new Vector()
+attDv2 = new Vector()
+attDv3 = new Vector()
+gFobj = new File()
+guiGraph = new Graph()
+
+guiGraph.size(0, tstop, -100, 50)
+graphList[0].append(guiGraph)
+guiGraph.addvar("Afibre.node[0].v(0.5)", 1, 1)
+guiGraph.addvar("Afibre.node[10].v(0.5)", 2, 1)
+guiGraph.addvar("Afibre.node[20].v(0.5)", 3, 1)
+
+attDv1.record(&Afibre.node[0].v(0.5))
+attDv2.record(&Afibre.node[10].v(0.5))
+attDv3.record(&Afibre.node[20].v(0.5))
+
+printf("INFO: Using intracellular stimulation\n")
+
+run()
+
+// save responses to .txt file
+sprint(fName,"data/modelValidation/AFibreModelValidation.txt")
+gFobj.wopen(fName)
+attDv1.printf(gFobj, "%f\n")
+attDv2.printf(gFobj, "%f\n")
+attDv3.printf(gFobj, "%f\n")
+gFobj.close()
